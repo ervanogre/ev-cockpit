@@ -59,7 +59,7 @@ body{margin:0;background:#04060d;background-image:radial-gradient(circle at 80% 
 <div class="top">
   <div class="brand"><h1>⚡ EV COCKPIT</h1></div>
   <div style="display:flex;gap:5px">
-    <a class="pill poly" href="intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.polytron.ev_app;end">🏍️ PEV 2W</a>
+<button class="pill poly" onclick="efek(this);bukaPEV()">🏍️ PEV 2W</button>
     <button class="pill sos" onclick="efek(this);cariDarurat()">🛞 Bengkel</button>
     <button class="pill" id="gpsBtn" onclick="efek(this);mulaiLacak()">📍 Lacak</button>
   </div>
@@ -108,8 +108,147 @@ body{margin:0;background:#04060d;background-image:radial-gradient(circle at 80% 
 <div class="sec-bar">
   <span class="sec-lbl">TITIK TERSIMPAN & PREDIKSI TIBA</span>
   <div style="display:flex;gap:6px">
-    <button class="mini-btn" onclick="simpanLokasi()">➕ Tandai</button>
+    <select id="syncInt" class="mini-btn" onchange="aturIntervalSync()"><option value="5">🔄 5m</option><option value="15" selected>🔄 15m</option><option value="30">🔄 30m</option><option value="0">⏸️ Off</option></select><button class="mini-btn" onclick="simpanLokasi()">➕ Tandai</button>
     <button class="mini-btn" onclick="salinData()">📋 Salin</button>
   </div>
 </div>
 <div id="list"></div>
+<script>
+const awal=[
+  {n:"SPLU Pecangaan Jepara",k:"Colokan AC",st:"🟢 Lancar",alt:12,lat:-6.6955,lng:110.7082},
+  {n:"SPKLU PLN ULP Jepara",k:"AC 22 kW",st:"🟢 Lancar",alt:8,lat:-6.593727,lng:110.666148},
+  {n:"SPKLU PLN UP3 Kudus",k:"DC Fast & AC",st:"🟢 Lancar",alt:18,lat:-6.8251,lng:110.8336}
+];
+let data=JSON.parse(localStorage.getItem("ev_poly_v1")||"null")||awal;
+let maxJarak=parseFloat(localStorage.getItem("ev_poly_max")||"115");
+let sisaKm=parseFloat(localStorage.getItem("ev_poly_cur")||"92");
+let pos=null,watchId=null,syncTimer=null;
+
+function efek(el){
+  if(navigator.vibrate)navigator.vibrate(25);
+  const c=document.createElement("span");c.className="ripple";
+  const d=Math.max(el.clientWidth,el.clientHeight);
+  c.style.width=c.style.height=d+"px";
+  c.style.left=(el.clientWidth/2-d/2)+"px";c.style.top=(el.clientHeight/2-d/2)+"px";
+  el.appendChild(c);setTimeout(()=>c.remove(),550);
+}
+function bukaPEV(){
+  if(window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.AppLauncher){
+    window.Capacitor.Plugins.AppLauncher.openUrl({url:"com.polytron.ev_app"});
+  }else{
+    alert("Tombol PEV 2W aktif otomatis setelah di-install sebagai file .APK dari GitHub!");
+  }
+}
+function cariBebas(){
+  const q=document.getElementById("cariInput").value.trim();
+  if(!q)return alert("Ketik nama tempat, masjid, atau kota.");
+  window.location.href="geo:0,0?q="+encodeURIComponent(q);
+}
+function updateTampilanBaterai(){
+  const p=Math.min(100,Math.max(0,Math.round((sisaKm/maxJarak)*100)));
+  document.getElementById("persenBat").value=p;
+  document.getElementById("sisaKmTxt").textContent=sisaKm.toFixed(1)+" km";
+  document.getElementById("maxTxt").textContent=maxJarak;
+  const bar=document.getElementById("progBar");bar.style.width=p+"%";
+  if(p<=20){bar.style.background="linear-gradient(90deg,#dc2626,#f87171)";bar.style.boxShadow="0 0 12px rgba(239,68,68,.8)";}
+  else if(p<=50){bar.style.background="linear-gradient(90deg,#d97706,#fbbf24)";bar.style.boxShadow="0 0 12px rgba(251,191,36,.6)";}
+  else{bar.style.background="linear-gradient(90deg,#059669,#34d399)";bar.style.boxShadow="0 0 12px rgba(52,211,153,.6)";}
+  const mnt=Math.round((100-p)*2.7),jam=Math.floor(mnt/60),sisaMnt=mnt%60;
+  document.getElementById("casInfo").textContent=p>=98?"Baterai penuh siap jalan":"Cas 100%: ~"+(jam>0?jam+"j ":"")+sisaMnt+"m";
+}
+function ubahPersen(){
+  const p=parseFloat(document.getElementById("persenBat").value)||0;
+  sisaKm=(p/100)*maxJarak;localStorage.setItem("ev_poly_cur",sisaKm);
+  updateTampilanBaterai();render();
+}
+function aturMotor(){
+  const b=prompt("Jarak 100% motor (115 Fox-R, 65 Fox-S):",maxJarak);
+  if(!b)return;maxJarak=parseFloat(b)||115;sisaKm=maxJarak;
+  localStorage.setItem("ev_poly_max",maxJarak);localStorage.setItem("ev_poly_cur",sisaKm);
+  updateTampilanBaterai();render();
+}
+function simpanStore(){localStorage.setItem("ev_poly_v1",JSON.stringify(data));}
+function cariCharge(){setTimeout(()=>{window.location.href="geo:0,0?q="+encodeURIComponent("SPKLU SPLU Polytron Fast Charging terdekat");},120);}
+function cariDarurat(){setTimeout(()=>{window.location.href="geo:0,0?q="+encodeURIComponent("Tambal Ban Bengkel Motor terdekat");},120);}
+function cariSai(){setTimeout(()=>{window.location.href="geo:0,0?q="+encodeURIComponent("Sa'i Fried Chicken terdekat");},120);}
+function cariMinimarket(){setTimeout(()=>{window.location.href="geo:0,0?q="+encodeURIComponent("Alfamart Indomaret terdekat");},120);}
+function navigasiCepat(){const t=prompt("Tujuan (mode cepat motor):");if(t)window.location.href="google.navigation:q="+encodeURIComponent(t)+"&mode=l";}
+function navigasiMotor(){const t=prompt("Tujuan (jalur utama anti-gang):");if(t)window.location.href="google.navigation:q="+encodeURIComponent(t)+"&mode=d&avoid=t";}
+function ruteEstafet(){const s=prompt("1. Tempat singgah ngecas:");if(!s)return;const a=prompt("2. Kota tujuan akhir:");if(a)window.location.href="google.navigation:q="+encodeURIComponent(s)+"&mode=d&avoid=t";}
+
+async function syncSPKLU(){
+  const c=pos||{lat:-6.6955,lng:110.7082};
+  try{
+    const q=`[out:json][timeout:12];(node["amenity"="charging_station"](around:35000,${c.lat},${c.lng});way["amenity"="charging_station"](around:35000,${c.lat},${c.lng}););out center;`;
+    const res=await fetch("https://overpass-api.de"+encodeURIComponent(q));
+    const json=await res.json();
+    let tambah=0;
+    (json.elements||[]).forEach(el=>{
+      const lat=el.lat||(el.center&&el.center.lat);
+      const lng=el.lon||(el.center&&el.center.lon);
+      if(!lat||!lng)return;
+      const nama=(el.tags&&(el.tags.name||el.tags.operator))||"SPKLU / Charging Station";
+      const ada=data.some(d=>hitungKm(d.lat,d.lng,lat,lng)<0.15);
+      if(!ada){
+        data.push({n:nama,k:"Auto-Sync Peta",st:"🟢 Lancar",alt:0,lat:lat,lng:lng});
+        tambah++;
+      }
+    });
+    if(tambah>0){simpanStore();render();}
+  }catch(e){}
+}
+
+function aturIntervalSync(){
+  if(syncTimer)clearInterval(syncTimer);
+  const mnt=parseInt(document.getElementById("syncInt").value)||0;
+  localStorage.setItem("ev_sync_mnt",mnt);
+  if(mnt>0){
+    syncSPKLU();
+    syncTimer=setInterval(syncSPKLU,mnt*60000);
+  }
+}
+
+function simpanLokasi(){
+  const n=prompt("Nama tempat charge:");if(!n)return;
+  navigator.geolocation.getCurrentPosition(p=>{
+    const alt=p.coords.altitude?Math.round(p.coords.altitude):0;
+    data.unshift({n:n,k:"Titik Pribadi",st:"🟢 Lancar",alt:alt,lat:p.coords.latitude,lng:p.coords.longitude});
+    simpanStore();pos={lat:p.coords.latitude,lng:p.coords.longitude,alt:alt};render();
+  },()=>alert("Aktifkan GPS HP."),{enableHighAccuracy:true});
+}
+function ubahStatus(i){const s=["🟢 Lancar","🟡 Antre / Lambat","🔴 Rusak / Bahaya"];data[i].st=s[(s.indexOf(data[i].st)+1)%s.length];simpanStore();render();}
+function salinData(){
+  const r=data.map(s=>"• "+s.n+" ["+(s.st||"🟢")+"] ("+s.lat.toFixed(5)+", "+s.lng.toFixed(5)+")").join("\n");
+  if(navigator.clipboard){navigator.clipboard.writeText("Titik Charge EV:\n"+r);alert("Disalin!");}else prompt("Salin:",r);
+}
+function hapus(i){if(confirm("Hapus titik ini?")){data.splice(i,1);simpanStore();render();}}
+function jalanKe(lat,lng){window.location.href="google.navigation:q="+lat+","+lng+"&mode=d&avoid=t";}
+function hitungKm(a,b,c,d){const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,k=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return R*2*Math.atan2(Math.sqrt(k),Math.sqrt(1-k));}
+function render(){
+  const c=pos||{lat:-6.6955,lng:110.7082,alt:12};
+  const kw=(document.getElementById("cariInput").value||"").toLowerCase();
+  document.getElementById("elevInfo").textContent=(watchId?"Lacak Aktif":"Standby")+" • "+Math.round(c.alt||0)+" mdpl";
+  const urut=data.map((s,i)=>Object.assign({},s,{i:i,d:hitungKm(c.lat,c.lng,s.lat,s.lng)})).filter(s=>!kw||s.n.toLowerCase().includes(kw)||s.k.toLowerCase().includes(kw)).sort((a,b)=>a.d-b.d);
+  document.getElementById("list").innerHTML=urut.map(s=>{
+    const ba=(s.alt||0)-(c.alt||0),im=ba>60?" • 🔺 Nanjak":(ba<-60?" • 🔻 Turun":"");
+    const butuhKm=ba>60?s.d*1.3:s.d,sisaTiba=Math.round(((sisaKm-butuhKm)/maxJarak)*100),aman=sisaTiba>=10;
+    const infoTiba=sisaTiba>0?"Tiba sisa ~"+sisaTiba+"%":"Baterai habis di jalan!";
+    return '<div class="item '+(aman?'':'far')+'"><div><h3>'+s.n+'</h3><p>'+s.k+' • <b>'+s.d.toFixed(1)+' km</b>'+im+'<br><span style="color:'+(aman?'#38bdf8':'#f87171')+'">'+infoTiba+'</span></p><span class="st-tag" onclick="ubahStatus('+s.i+')">'+(s.st||'🟢 Lancar')+'</span></div><div style="display:flex;align-items:center;gap:4px"><button class="go-btn" onclick="jalanKe('+s.lat+','+s.lng+')">Jalan</button><button class="del-btn" onclick="hapus('+s.i+')">✕</button></div></div>';
+  }).join("");
+}
+function mulaiLacak(){
+  const btn=document.getElementById("gpsBtn");
+  if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;btn.textContent="📍 Lacak";render();return;}
+  btn.textContent="⏳...";
+  watchId=navigator.geolocation.watchPosition(p=>{
+    const b={lat:p.coords.latitude,lng:p.coords.longitude,alt:p.coords.altitude||0};
+    if(pos){const j=hitungKm(pos.lat,pos.lng,b.lat,b.lng);if(j>=0.02&&j<5){const naik=(b.alt-(pos.alt||0))>5;sisaKm=Math.max(0,sisaKm-(naik?j*1.25:j));localStorage.setItem("ev_poly_cur",sisaKm);updateTampilanBaterai();}}
+    pos=b;btn.textContent="🟢 Lacak";render();
+  },()=>{btn.textContent="📍 Lacak";watchId=null;alert("Aktifkan izin lokasi HP.");},{enableHighAccuracy:true,maximumAge:3000});
+}
+const savedInt=localStorage.getItem("ev_sync_mnt");
+if(savedInt!==null)document.getElementById("syncInt").value=savedInt;
+updateTampilanBaterai();render();aturIntervalSync();
+</script>
+</body>
+</html>
