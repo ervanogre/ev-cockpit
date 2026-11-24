@@ -19,7 +19,9 @@ jobs:
       - name: Install & Build Android
         run: |
           npm install
+          npm install -D @capacitor/assets
           npx cap add android
+          npx capacitor-assets generate --android --iconBackgroundColor '#050811'
           python3 -c '
           p = "android/app/src/main/AndroidManifest.xml"
           s = open(p).read()
