@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>EV Cockpit HUD</title>
+<style>
+*{box-sizing:border-box;font-family:system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#04060d;background-image:radial-gradient(circle at 80% 0%,rgba(56,189,248,.16),transparent 45%),radial-gradient(circle at 10% 45%,rgba(16,185,129,.14),transparent 45%);color:#f8fafc;padding:15px;min-height:100vh}
+@keyframes floatOrb{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes rippleAnim{to{transform:scale(4);opacity:0}}
+.ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.35);transform:scale(0);animation:rippleAnim .55s linear;pointer-events:none}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:6px}
+.brand h1{font-size:18px;margin:0;font-weight:900;background:linear-gradient(90deg,#fff,#38bdf8,#10b981);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.pill{background:rgba(22,30,49,.8);color:#38bdf8;font-size:11px;padding:7px 11px;border-radius:20px;border:1px solid rgba(56,189,248,.35);cursor:pointer;font-weight:700;text-decoration:none}
+.pill.sos{color:#fca5a5;border-color:rgba(248,113,113,.45);background:rgba(127,29,29,.4)}
+.pill.poly{color:#fde047;border-color:rgba(250,204,21,.45);background:rgba(113,63,18,.4)}
+.search-box{display:flex;gap:6px;margin-bottom:12px;background:rgba(20,28,46,.9);padding:6px;border-radius:16px;border:1px solid rgba(56,189,248,.25)}
+.search-box input{flex:1;background:transparent;border:0;color:#fff;font-size:13px;padding:6px 10px;outline:none}
+.search-box button{background:#2563eb;color:#fff;border:0;padding:8px 14px;border-radius:12px;font-weight:800;font-size:12px;cursor:pointer}
+.hud-bat{background:linear-gradient(145deg,rgba(20,28,46,.9),rgba(9,13,22,.95));border-radius:22px;padding:14px;margin-bottom:12px;border:1px solid rgba(56,189,248,.2)}
+.bat-top{display:flex;justify-content:space-between;align-items:center}
+.bat-box{display:flex;align-items:baseline;gap:3px;background:#04060d;padding:5px 12px;border-radius:14px;border:1px solid rgba(16,185,129,.4)}
+.bat-box input{width:54px;background:transparent;border:0;color:#10b981;font-size:24px;font-weight:900;text-align:right;outline:none}
+.prog-bg{width:100%;height:9px;background:rgba(255,255,255,.07);border-radius:10px;margin:10px 0;overflow:hidden}
+.prog-fill{height:100%;width:80%;background:linear-gradient(90deg,#059669,#34d399);border-radius:10px;transition:width .4s,background .4s}
+.bat-foot{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#94a3b8}
+.set-btn{background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.3);padding:4px 10px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer}
+.bento{display:grid;grid-template-columns:1.05fr 1fr;gap:10px;margin-bottom:10px}
+.b-card{position:relative;overflow:hidden;border-radius:20px;padding:14px;border:1px solid rgba(255,255,255,.12);cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;text-align:left;color:#fff}
+.b-tall{grid-row:span 2;background:linear-gradient(155deg,#1d4ed8,#1e3a8a 60%,#0f172a)}
+.b-main{background:linear-gradient(135deg,#059669,#064e3b)}
+.b-fast{background:linear-gradient(135deg,#0d9488,#134e4a)}
+.orb{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:8px;animation:floatOrb 3s ease-in-out infinite}
+.b-tall .orb{width:48px;height:48px;font-size:24px;border-radius:15px}
+.b-title{font-size:14px;font-weight:800;display:block;line-height:1.2}
+.b-tall .b-title{font-size:16px}
+.b-sub{font-size:11px;color:rgba(255,255,255,.75);margin-top:3px;display:block}
+.b-wide{position:relative;overflow:hidden;width:100%;border-radius:18px;padding:13px 15px;margin-bottom:10px;background:rgba(30,41,59,.9);border:1px solid rgba(139,92,246,.35);display:flex;align-items:center;gap:12px;color:#fff;cursor:pointer}
+.b-wide .orb{margin:0;width:36px;height:36px;background:rgba(139,92,246,.25)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.b-food{position:relative;overflow:hidden;border-radius:18px;padding:12px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:10px;color:#fff;cursor:pointer;text-align:left}
+.b-food .orb{margin:0;width:34px;height:34px;font-size:17px;flex-shrink:0}
+.f-sai{background:linear-gradient(135deg,#c2410c,#7c2d12)}
+.f-mini{background:linear-gradient(135deg,#0369a1,#0c4a6e)}
+.sec-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.sec-lbl{font-size:11px;color:#64748b;font-weight:800}
+.mini-btn{background:rgba(30,41,59,.85);border:1px solid rgba(255,255,255,.12);color:#cbd5e1;font-size:11px;padding:5px 10px;border-radius:10px;cursor:pointer;font-weight:700}
+.item{background:rgba(20,28,46,.8);border-radius:16px;padding:13px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:10px;border-left:4px solid #10b981}
+.item.far{border-left-color:#ef4444}
+.item h3{margin:0 0 3px;font-size:14px}
+.item p{margin:0;font-size:12px;color:#94a3b8}
+.st-tag{display:inline-block;margin-top:5px;font-size:11px;padding:2px 8px;border-radius:8px;background:#04060d;border:1px solid rgba(255,255,255,.1);cursor:pointer}
+.go-btn{background:#10b981;color:#fff;border:0;padding:10px 14px;border-radius:12px;font-weight:800;font-size:13px;cursor:pointer}
+.del-btn{background:transparent;color:#64748b;border:0;font-size:16px;padding:6px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand"><h1>⚡ EV COCKPIT</h1></div>
+  <div style="display:flex;gap:5px">
+    <a class="pill poly" href="intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.polytron.ev_app;end">🏍️ PEV 2W</a>
+    <button class="pill sos" onclick="efek(this);cariDarurat()">🛞 Bengkel</button>
+    <button class="pill" id="gpsBtn" onclick="efek(this);mulaiLacak()">📍 Lacak</button>
+  </div>
+</div>
+<div class="search-box">
+  <input type="text" id="cariInput" placeholder="Cari lokasi di Maps / filter titik..." oninput="render()" onkeydown="if(event.key==='Enter')cariBebas()">
+  <button onclick="efek(this);cariBebas()">🔍 Cari</button>
+</div>
+<div class="hud-bat">
+  <div class="bat-top">
+    <div><strong style="font-size:15px">Daya Baterai</strong><br><span id="casInfo" style="font-size:12px;color:#fbbf24">Cas 100%: ~1j</span></div>
+    <div class="bat-box"><input type="number" id="persenBat" value="80" min="0" max="100" oninput="ubahPersen()"><b style="color:#10b981;font-size:14px">%</b></div>
+  </div>
+  <div class="prog-bg"><div class="prog-fill" id="progBar"></div></div>
+  <div class="bat-foot">
+    <span>Sisa: <b id="sisaKmTxt" style="color:#38bdf8">92.0 km</b> • <span id="elevInfo">Standby</span></span>
+    <button class="set-btn" onclick="aturMotor()">⚙️ <span id="maxTxt">115</span> km</button>
+  </div>
+</div>
+<div class="bento">
+  <button class="b-card b-tall" onclick="efek(this);cariCharge()">
+    <div class="orb">⚡</div>
+    <div><span class="b-title">Cari SPKLU / SPLU</span><span class="b-sub">Scan titik charge & Kantor PLN terdekat</span></div>
+  </button>
+  <button class="b-card b-main" onclick="efek(this);navigasiMotor()">
+    <div style="display:flex;align-items:center;gap:8px"><div class="orb" style="margin:0;width:32px;height:32px;font-size:16px">🛣️</div><div><span class="b-title">Jalur Utama</span><span class="b-sub">Anti-gang & non-tol</span></div></div>
+  </button>
+  <button class="b-card b-fast" onclick="efek(this);navigasiCepat()">
+    <div style="display:flex;align-items:center;gap:8px"><div class="orb" style="margin:0;width:32px;height:32px;font-size:16px">🛵</div><div><span class="b-title">Jalur Cepat</span><span class="b-sub">Mode standar motor</span></div></div>
+  </button>
+</div>
+<button class="b-wide" onclick="efek(this);ruteEstafet()">
+  <div class="orb">🔗</div>
+  <div style="text-align:left"><span class="b-title">Rute Estafet Touring</span><span class="b-sub">Singgah tempat charge dulu lalu lanjut tujuan</span></div>
+</button>
+<div class="row2">
+  <button class="b-food f-sai" onclick="efek(this);cariSai()">
+    <div class="orb">🍗</div>
+    <div><span class="b-title" style="font-size:13px">Sa'i Chicken</span><span class="b-sub">Makan & istirahat</span></div>
+  </button>
+  <button class="b-food f-mini" onclick="efek(this);cariMinimarket()">
+    <div class="orb">🏪</div>
+    <div><span class="b-title" style="font-size:13px">Alfa / Indo</span><span class="b-sub">Minimarket terdekat</span></div>
+  </button>
+</div>
+<div class="sec-bar">
+  <span class="sec-lbl">TITIK TERSIMPAN & PREDIKSI TIBA</span>
+  <div style="display:flex;gap:6px">
+    <button class="mini-btn" onclick="simpanLokasi()">➕ Tandai</button>
+    <button class="mini-btn" onclick="salinData()">📋 Salin</button>
+  </div>
+</div>
+<div id="list"></div>
