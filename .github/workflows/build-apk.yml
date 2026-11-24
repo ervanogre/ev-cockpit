@@ -3,6 +3,7 @@ on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,11 +20,19 @@ jobs:
         run: |
           npm install
           npx cap add android
-          sed -i '/<application/i \    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.INTERNET" />
-    <queries>
-        <package android:name="com.polytron.ev_app" />
-        <package android:name="com.google.android.apps.maps" />
-    </queries>' android/app/src/main/AndroidManifest.xml
+          python3 -c '
+          p = "android/app/src/main/AndroidManifest.xml"
+          s = open(p).read()
+          add = """<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+          <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+          <queries>
+            <package android:name="com.polytron.ev_app" />
+            <package android:name="com.google.android.apps.maps" />
+          </queries>
+          <application"""
+          open(p, "w").write(s.replace("<application", add, 1))
+          '
+          npx cap sync android
           cd android && chmod +x gradlew && ./gradlew assembleDebug
       - name: Upload APK
         uses: actions/upload-artifact@v4
